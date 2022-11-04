@@ -1,126 +1,92 @@
 package uk.ac.newcastle.enterprisemiddleware.customer;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Logger;
 
-import javax.enterprise.context.Dependent;
+import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.inject.Named;
-import javax.validation.ConstraintViolationException;
+import javax.transaction.Transactional;
+
+import org.hibernate.service.spi.ServiceException;
+
+import uk.ac.newcastle.enterprisemiddleware.booking.Booking;
 
 /**
- * <p>This Service assumes the Control responsibility in the ECB pattern.</p>
+ * This Service assumes the Control responsibility in the ECB pattern.
  *
- * <p>The validation is done here so that it may be used by other Boundary Resources. Other Business Logic would go here
- * as well.</p>
+ * The validation is done here so that it may be used by other Boundary
+ * Resources. Other Business Logic would go here as well.
  *
- * <p>There are no access modifiers on the methods, making them 'package' scope.  They should only be accessed by a
- * Boundary / Web Service class with public methods.</p>
- *
- *
- * @author Joshua Wilson
- * @see CustomerValidator
- * @see CustomerRepository
+ * There are no access modifiers on the methods, making them 'package' scope.
+ * They should only be accessed by a Boundary / Web Service class with public
+ * methods.
  */
-@Dependent
+@ApplicationScoped
 public class CustomerService {
-	
-    @Inject
-    @Named("logger")
-    Logger log;
-    
-    @Inject
-    CustomerValidator validator;
 
-    @Inject
-    CustomerRepository customerRepository;
+	@Inject
+	Logger log;
 
-    /**
-     * <p>Returns a List of all persisted {@link Customer} objects, sorted alphabetically by last name.<p/>
-     *
-     * @return List of Customer objects
-     */
-    public List<Customer> findAllOrderedByName() {
-    	return customerRepository.findAllOrderedByName();
-    }
+	@Inject
+	CustomerValidator customerValidator;
 
-    /**
-     * <p>Returns a single Customer object, specified by a Long id.<p/>
-     *
-     * @param id The id field of the Customer to be returned
-     * @return The Customer with the specified id
-     */
-    public Customer findById(Long id) {
-        return customerRepository.findById(id);
-    }
+	@Inject
+	CustomerMapper customerMapper;
 
-    /**
-     * <p>Returns a single Customer object, specified by a String email.</p>
-     *
-     * <p>If there is more than one Customer with the specified email, only the first encountered will be returned.<p/>
-     *
-     * @param email The email field of the Customer to be returned
-     * @return The first Customer with the specified email
-     */
-    public Customer findByEmail(String email) {
-    	return customerRepository.findByEmail(email);
-    }
+	@Inject
+	CustomerRepository customerRepository;
 
-    /**
-     * <p>Writes the provided Customer object to the application database.<p/>
-     *
-     * <p>Validates the data in the provided Customer object using a {@link CustomerValidator} object.<p/>
-     *
-     * @param Customer The Customer object to be written to the database using a {@link CustomerRepository} object
-     * @return The Customer object that has been successfully written to the application database
-     * @throws ConstraintViolationException, ValidationException, Exception
-     */
-    public Customer create(Customer customer) throws Exception {
-        log.info("CustomerService.create() - Creating: {} " + customer);
-        
-        // Check to make sure the data fits with the parameters in the Flight model and passes validation.
-        validator.validateCustomer(customer);
+	// wrapper to demonstrate how validator works, it's really as same as @valid.
+	// Keep in mind we do not want to expose internal service error state to REST
+	// API, especially not the validated value contained in the violation object.
+	// But for simplify, let's re-throw it right now.
+	public void validateCustomer(Customer customer) {
+		customerValidator.validate(customerMapper.toEntity(customer));
+	}
 
-        // Write the Flight to the database.
-        return customerRepository.create(customer);
-    }
+	public List<Customer> findAll() {
+		return customerMapper.toDomainList(customerRepository.findAll());
+	}
 
-    /**
-     * <p>Updates an existing Customer object in the application database with the provided Customer object.<p/>
-     *
-     * <p>Validates the data in the provided Customer object using a CustomerValidator object.<p/>
-     *
-     * @param Customer The Customer object to be passed as an update to the application database
-     * @return The Customer object that has been successfully updated in the application database
-     * @throws ConstraintViolationException, ValidationException, Exception
-     */
-    public Customer update(Customer customer) throws Exception {
-        log.info("FlightService.update() - Updating " + customer.getId());
+	public Optional<Customer> findById(Integer id) {
+		return customerRepository.findById(id).map(customerMapper::toDomain);
+	}
 
-        // Check to make sure the data fits with the parameters in the Flight model and passes validation.
-        validator.validateCustomer(customer);
+	public Optional<Customer> findByEmail(String email) {
+		return customerRepository.findByEmail(email).map(customerMapper::toDomain);
+	}
 
-        // Either update the Flight or add it if it can't be found.
-        return customerRepository.update(customer);
-    }
-    /**
-     * <p>Deletes the provided Customer object from the application database if found there.<p/>
-     *
-     * @param Customer The Customer object to be removed from the application database
-     * @return The Customer object that has been successfully removed from the application database; or null
-     * @throws Exception
-     */
-    public Customer delete(Customer customer) throws Exception {
-        log.info("delete() - Deleting " + customer.toString());
+	public List<Booking> getBooking(Integer id) {
+		return customerRepository.findById(id).map(CustomerEntity::getBooking).orElse(List.of());
+	}
 
-        Customer deletedCustomer = null;
+	@Transactional
+	public void create(Customer customer) {
+		log.info("CustomerService.create() - Creating: {} " + customer);
 
-        if (customer.getId() != null) {
-        	deletedCustomer = customerRepository.delete(customer);
-        } else {
-            log.info("delete() - No ID was found so can't Delete.");
-        }
+		CustomerEntity entity = customerMapper.toEntity(customer);
+		customerRepository.create(entity);
+		customerMapper.updateDomainFromEntity(entity, customer);
+	}
 
-        return deletedCustomer;
-    }
+	@Transactional
+	public void update(Customer customer) {
+		log.info("CustomerService.update() - Updating " + customer);
+
+		CustomerEntity entity = customerRepository.findById(customer.getId())
+				.orElseThrow(() -> new ServiceException("No Customer found for customerId[%s]" + customer.getId()));
+		customerMapper.updateEntityFromDomain(customer, entity);
+		customerRepository.update(entity);
+		customerMapper.updateDomainFromEntity(entity, customer);
+	}
+
+	@Transactional
+	public void delete(Integer id) {
+		log.info("CustomerService.delete() - Deleting " + id);
+
+		CustomerEntity entity = customerRepository.findById(id)
+				.orElseThrow(() -> new ServiceException("No Customer found for customerId[%s]" + id));
+		customerRepository.delete(entity);
+	}
 }
