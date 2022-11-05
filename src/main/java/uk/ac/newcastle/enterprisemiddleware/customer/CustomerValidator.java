@@ -52,7 +52,7 @@ public class CustomerValidator {
 		}
 
 		if (customerRepository.findByEmail(customer.getEmail()).isPresent()) {
-			throw new UniqueEmailException("Unique Number Violation");
+			throw new UniqueEmailException("Unique Email Violation");
 		}
 	}
 }

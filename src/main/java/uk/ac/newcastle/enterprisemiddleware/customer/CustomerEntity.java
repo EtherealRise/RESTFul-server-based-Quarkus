@@ -21,7 +21,7 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
-import uk.ac.newcastle.enterprisemiddleware.booking.Booking;
+import uk.ac.newcastle.enterprisemiddleware.booking.BookingEntity;
 
 @Entity
 @ApplicationScoped
@@ -53,7 +53,7 @@ public class CustomerEntity implements Serializable {
 	private String email;
 
 	@OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
-	private List<Booking> bookings = new ArrayList<>();
+	private List<BookingEntity> bookings = new ArrayList<>();
 
 	public Long getId() {
 		return id;
@@ -87,7 +87,7 @@ public class CustomerEntity implements Serializable {
 		this.email = email;
 	}
 
-	public List<Booking> getBooking() {
+	public List<BookingEntity> getBooking() {
 		return bookings;
 	}
 

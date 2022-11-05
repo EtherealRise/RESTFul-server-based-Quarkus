@@ -10,7 +10,7 @@ import javax.transaction.Transactional;
 
 import org.hibernate.service.spi.ServiceException;
 
-import uk.ac.newcastle.enterprisemiddleware.booking.Booking;
+import uk.ac.newcastle.enterprisemiddleware.booking.BookingEntity;
 
 /**
  * This Service assumes the Control responsibility in the ECB pattern.
@@ -57,7 +57,7 @@ public class CustomerService {
 		return customerRepository.findByEmail(email).map(customerMapper::toDomain);
 	}
 
-	public List<Booking> getBooking(Integer id) {
+	public List<BookingEntity> getBooking(Integer id) {
 		return customerRepository.findById(id).map(CustomerEntity::getBooking).orElse(List.of());
 	}
 
@@ -71,14 +71,12 @@ public class CustomerService {
 	}
 
 	@Transactional
-	public void update(Customer customer) {
-		log.info("CustomerService.update() - Updating " + customer);
+	public void update(Integer id) {
+		log.info("CustomerService.update() - Updating " + id);
 
-		CustomerEntity entity = customerRepository.findById(customer.getId())
-				.orElseThrow(() -> new ServiceException("No Customer found for customerId[%s]" + customer.getId()));
-		customerMapper.updateEntityFromDomain(customer, entity);
+		CustomerEntity entity = customerRepository.findById(id)
+				.orElseThrow(() -> new ServiceException("No Customer found for customerId[%s]" + id));
 		customerRepository.update(entity);
-		customerMapper.updateDomainFromEntity(entity, customer);
 	}
 
 	@Transactional

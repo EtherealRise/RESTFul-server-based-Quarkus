@@ -24,6 +24,7 @@ import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.hibernate.service.spi.ServiceException;
 import org.jboss.resteasy.reactive.Cache;
 
 import uk.ac.newcastle.enterprisemiddleware.util.RestServiceException;
@@ -133,19 +134,19 @@ public class CustomerRestService {
 			}
 			throw new RestServiceException("Bad Request", responseObj, Response.Status.BAD_REQUEST, ce);
 		} catch (UniqueEmailException e) {
-			// it should be safe since we have validated to ensure this email is existence
-			Customer customerOld = customerService.findByEmail(customer.getEmail()).get();
+			// we are updating an existence flight, so ignore this as expected
+		}
 
-			if (id.equals(customerOld.getId())) {
-				// Now we have validated both email and id is matched, let's update it
-				customerService.update(customer);
-			}
-
-			else {
-				Map<String, String> responseObj = new HashMap<>();
-				responseObj.put("id", "please ensure the id is associated with this email");
-				throw new RestServiceException("Bad Request", responseObj, Response.Status.BAD_REQUEST, e);
-			}
+		try {
+			// we do NOT further check whether the id is associated with this customer by
+			// comparing the email, it means with this API the user could change everything
+			// including email. The behavior would be like creating a new object with same
+			// id. For simplify I think treat this as correct operation.
+			customerService.update(id);
+		} catch (ServiceException e) {
+			Map<String, String> responseObj = new HashMap<>();
+			responseObj.put("id", "please ensure the id is associated with this number");
+			throw new RestServiceException("Bad Request", responseObj, Response.Status.NOT_FOUND, e);
 		}
 
 		return Response.ok(customer).build();

@@ -76,7 +76,7 @@ class CustomerRestServiceIntegrationTest {
 	@Order(5)
 	public void UpdateCustomerWithNonexistenceId() {
 		given().contentType(ContentType.JSON).body(customer).when().put("/id/{id:.+}", 987654321).then()
-				.statusCode(400);
+				.statusCode(404);
 	}
 
 	@Test

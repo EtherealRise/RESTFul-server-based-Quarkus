@@ -1,90 +1,73 @@
 package uk.ac.newcastle.enterprisemiddleware.flight;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import javax.persistence.NoResultException;
-import javax.validation.ConstraintViolation;
-import javax.validation.ConstraintViolationException;
-import javax.validation.ValidationException;
-import javax.validation.Validator;
-
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+import javax.validation.ConstraintViolation;
+import javax.validation.ConstraintViolationException;
+import javax.validation.Validator;
+
 /**
- * <p>This class provides methods to check Flight objects against arbitrary requirements.</p>
+ * <p>
+ * This class provides methods to check Flight objects against arbitrary
+ * requirements.
+ * </p>
  *
  * @author Joshua Wilson
- * @see Flight
+ * @see FlightEntity
  * @see FlightRepository
  * @see javax.validation.Validator
  */
 @ApplicationScoped
 public class FlightValidator {
-    @Inject
-    Validator validator;
+	@Inject
+	Validator validator;
 
-    @Inject
-    FlightRepository crud;
+	@Inject
+	FlightRepository flightRepository;
 
-    /**
-     * <p>Validates the given Flight object and throws validation exceptions based on the type of error. If the error is standard
-     * bean validation errors then it will throw a ConstraintValidationException with the set of the constraints violated.<p/>
-     *
-     *
-     * <p>If the error is caused because an existing Flight with the same email is registered it throws a regular validation
-     * exception so that it can be interpreted separately.</p>
-     *
-     *
-     * @param Flight The Flight object to be validated
-     * @throws ConstraintViolationException If Bean Validation errors exist
-     * @throws ValidationException If Flight with the same email already exists
-     */
-    void validateFlight(Flight Flight) throws ConstraintViolationException, ValidationException {
-        // Create a bean validator and check for issues.
-        Set<ConstraintViolation<Flight>> violations = validator.validate(Flight);
+	/**
+	 * Validates the given Flight object and throws validation exceptions based on
+	 * the type of error. If the error is standard bean validation errors then it
+	 * will throw a ConstraintValidationException with the set of the constraints
+	 * violated.
+	 * 
+	 * If the error is caused by an existing Flight with the same email is
+	 * registered it throws a regular validation exception so that it can be
+	 * interpreted separately.
+	 * 
+	 * NOTE: When a database unicity constraint is set on a JPA Entity, we usually
+	 * got two options :
+	 * 
+	 * Catch the PersistenceException and the nested JPA provider exception (for
+	 * Hibernate : ConstraintViolationException). It is very hard to create a
+	 * generic handler for this exception (extract column name from the exception,
+	 * recreate the form context, …)
+	 * 
+	 * Query the database before the persist/merge operation, in order to check if
+	 * the unique value is already inserted in the database. this POC uses this
+	 * option.
+	 * 
+	 * If we don't use UniqueEmailException to isolation the validate flow, then it
+	 * will directly go to create a new flight entity even with same email address
+	 * which will raise a sql exception almost unreadable.
+	 *
+	 */
+	void validate(FlightEntity flight) {
+		Set<ConstraintViolation<FlightEntity>> violations = validator.validate(flight);
 
-        if (!violations.isEmpty()) {
-            throw new ConstraintViolationException(new HashSet<ConstraintViolation<?>>(violations));
-        }
+		if (!violations.isEmpty()) {
+			throw new ConstraintViolationException(new HashSet<ConstraintViolation<?>>(violations));
+		}
 
-        // Check the uniqueness of the flight number
-        if (numberAlreadyExists(Flight.getNumber(), Flight.getId())) {
-            throw new UniqueNumberException("Unique Number Violation");
-        }
-    }
+		if (flightRepository.findByNumber(flight.getNumber()).isPresent()) {
+			throw new UniqueNumberException("Unique Number Violation");
+		}
 
-    /**
-     * <p>Checks if a Flight with the same email address is already registered. This is the only way to easily capture the
-     * "@UniqueConstraint(columnNames = "email")" constraint from the Flight class.</p>
-     *
-     * <p>Since Update will being using an email that is already in the database we need to make sure that it is the email
-     * from the record being updated.</p>
-     *
-     * @param email The email to check is unique
-     * @param id The user id to check the email against if it was found
-     * @return boolean which represents whether the email was found, and if so if it belongs to the user with id
-     */
-    boolean numberAlreadyExists(String number, Long id) {
-        Flight flight = null;
-        Flight flightWithID = null;
-        try {
-            flight = crud.findByNumber(number);
-        } catch (NoResultException e) {
-            // ignore
-        }
-
-        if (flight != null && id != null) {
-            try {
-                flightWithID = crud.findById(id);
-                if (flightWithID != null && flightWithID.getNumber().equals(number)) {
-                    flight = null;
-                }
-            } catch (NoResultException e) {
-                // ignore
-            }
-        }
-        return flight != null;
-    }
+		if (flight.getDeparture().equals(flight.getDestination())) {
+			throw new IllegalArgumentException("Destination must not be same as departure");
+		}
+	}
 }
-
