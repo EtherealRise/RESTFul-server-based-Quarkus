@@ -21,7 +21,7 @@ import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 
-import uk.ac.newcastle.enterprisemiddleware.booking.Booking;
+import uk.ac.newcastle.enterprisemiddleware.booking.BookingEntity;
 
 @Entity
 @ApplicationScoped
@@ -54,7 +54,7 @@ public class FlightEntity implements Serializable {
 	private String destination;
 
 	@OneToMany(mappedBy = "flight", cascade = CascadeType.ALL, orphanRemoval = true)
-	private List<Booking> bookings = new ArrayList<>();
+	private List<BookingEntity> bookings = new ArrayList<>();
 
 	public Long getId() {
 		return id;
@@ -88,7 +88,7 @@ public class FlightEntity implements Serializable {
 		this.destination = destination;
 	}
 
-	public List<Booking> getBooking() {
+	public List<BookingEntity> getBooking() {
 		return bookings;
 	}
 

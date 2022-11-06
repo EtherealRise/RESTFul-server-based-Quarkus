@@ -11,6 +11,8 @@ import javax.transaction.Transactional;
 import org.hibernate.service.spi.ServiceException;
 
 import uk.ac.newcastle.enterprisemiddleware.booking.Booking;
+import uk.ac.newcastle.enterprisemiddleware.booking.BookingEntity;
+import uk.ac.newcastle.enterprisemiddleware.booking.BookingMapper;
 
 /**
  * This Service assumes the Control responsibility in the ECB pattern.
@@ -30,6 +32,9 @@ public class FlightService {
 
 	@Inject
 	FlightValidator flightValidator;
+	
+	@Inject
+	BookingMapper bookingMapper;
 
 	@Inject
 	FlightMapper flightMapper;
@@ -58,7 +63,7 @@ public class FlightService {
 	}
 
 	public List<Booking> getBooking(Integer id) {
-		return flightRepository.findById(id).map(FlightEntity::getBooking).orElse(List.of());
+		return bookingMapper.toDomainList(flightRepository.findById(id).map(FlightEntity::getBooking).orElse(List.of()));
 	}
 
 	@Transactional

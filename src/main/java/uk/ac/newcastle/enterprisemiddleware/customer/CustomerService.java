@@ -10,7 +10,9 @@ import javax.transaction.Transactional;
 
 import org.hibernate.service.spi.ServiceException;
 
+import uk.ac.newcastle.enterprisemiddleware.booking.Booking;
 import uk.ac.newcastle.enterprisemiddleware.booking.BookingEntity;
+import uk.ac.newcastle.enterprisemiddleware.booking.BookingMapper;
 
 /**
  * This Service assumes the Control responsibility in the ECB pattern.
@@ -33,6 +35,9 @@ public class CustomerService {
 
 	@Inject
 	CustomerMapper customerMapper;
+	
+	@Inject
+	BookingMapper bookingMapper;
 
 	@Inject
 	CustomerRepository customerRepository;
@@ -57,8 +62,8 @@ public class CustomerService {
 		return customerRepository.findByEmail(email).map(customerMapper::toDomain);
 	}
 
-	public List<BookingEntity> getBooking(Integer id) {
-		return customerRepository.findById(id).map(CustomerEntity::getBooking).orElse(List.of());
+	public List<Booking> getBooking(Integer id) {
+		return bookingMapper.toDomainList(customerRepository.findById(id).map(CustomerEntity::getBooking).orElse(List.of()));
 	}
 
 	@Transactional
