@@ -90,27 +90,42 @@ public class FlightRestService {
 	@Transactional
 	public Response createFlight(
 			@Parameter(description = "JSON representation of Flight object to be added to the database", required = true) Flight flight) {
+		
+        if (flight == null) {
+            throw new RestServiceException("Bad Request", Response.Status.BAD_REQUEST);
+        }
 
 		try {
+			
 			flight.setId(null);
 			flightService.validateFlight(flight);
 			flightService.create(flight);
+			
 		} catch (ConstraintViolationException ce) {
+			
 			Map<String, String> responseObj = new HashMap<>();
 			for (ConstraintViolation<?> violation : ce.getConstraintViolations()) {
 				responseObj.put(violation.getPropertyPath().toString(), violation.getMessage());
 			}
+			
 			throw new RestServiceException("Bad Request", responseObj, Response.Status.BAD_REQUEST, ce);
+			
 		} catch (IllegalArgumentException e) {
+			
 			Map<String, String> responseObj = new HashMap<>();
 			responseObj.put("destination", "destination must not be same as departure");
+			
 			throw new RestServiceException("destination of this flight is same as its departure", responseObj,
 					Response.Status.BAD_REQUEST, e);
+			
 		} catch (UniqueNumberException e) {
+			
 			Map<String, String> responseObj = new HashMap<>();
 			responseObj.put("number", "please use a unique number");
+			
 			throw new RestServiceException("number details supplied in request body conflict with another Flight",
 					responseObj, Response.Status.CONFLICT, e);
+			
 		}
 
 		return Response.ok(flight).status(Response.Status.CREATED).build();
@@ -126,36 +141,51 @@ public class FlightRestService {
 	public Response updateFlight(
 			@Parameter(description = "Id of flight to be updated", required = true) @Schema(minimum = "0") @PathParam("id") Integer id,
 			@Parameter(description = "JSON representation of Flight object to be added to the database", required = true) Flight flight) {
+		
+        if (flight == null) {
+            throw new RestServiceException("Bad Request", Response.Status.BAD_REQUEST);
+        }
 
 		try {
+			
 			flightService.validateFlight(flight);
+			
 		} catch (ConstraintViolationException ce) {
 			// Handle bean validation issues
 			Map<String, String> responseObj = new HashMap<>();
-
 			for (ConstraintViolation<?> violation : ce.getConstraintViolations()) {
 				responseObj.put(violation.getPropertyPath().toString(), violation.getMessage());
 			}
+			
 			throw new RestServiceException("Bad Request", responseObj, Response.Status.BAD_REQUEST, ce);
+			
 		} catch (IllegalArgumentException e) {
+			
 			Map<String, String> responseObj = new HashMap<>();
 			responseObj.put("destination", "destination must not be same as departure");
+			
 			throw new RestServiceException("destination of this flight is same as its departure", responseObj,
 					Response.Status.BAD_REQUEST, e);
+			
 		} catch (UniqueNumberException e) {
 			// we are updating an existence flight, so ignore this as expected
+			
 		}
 
 		try {
+			
 			// we do NOT further check whether the id is associated with this customer by
 			// comparing the email, it means with this API the user could change everything
 			// including email. The behavior would be like creating a new object with same
 			// id. For simplify I think treat this as correct operation.
 			flightService.update(id);
+			
 		} catch (ServiceException e) {
 			Map<String, String> responseObj = new HashMap<>();
 			responseObj.put("id", "please ensure the id is associated with this number");
+			
 			throw new RestServiceException("Bad Request", responseObj, Response.Status.NOT_FOUND, e);
+			
 		}
 
 		return Response.ok(flight).build();

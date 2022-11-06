@@ -90,6 +90,10 @@ public class CustomerRestService {
 	@Transactional
 	public Response createCustomer(
 			@Parameter(description = "JSON representation of Customer object to be added to the database", required = true) Customer customer) {
+		
+        if (customer == null) {
+            throw new RestServiceException("Bad Request", Response.Status.BAD_REQUEST);
+        }
 
 		try {
 			customer.setId(null);
@@ -123,8 +127,14 @@ public class CustomerRestService {
 			@Parameter(description = "Id of customer to be updated", required = true) @Schema(minimum = "0") @PathParam("id") Integer id,
 			@Parameter(description = "JSON representation of Customer object to be added to the database", required = true) Customer customer) {
 
+        if (customer == null) {
+            throw new RestServiceException("Bad Request", Response.Status.BAD_REQUEST);
+        }
+		
 		try {
+			
 			customerService.validateCustomer(customer);
+			
 		} catch (ConstraintViolationException ce) {
 			// Handle bean validation issues
 			Map<String, String> responseObj = new HashMap<>();
@@ -133,6 +143,7 @@ public class CustomerRestService {
 				responseObj.put(violation.getPropertyPath().toString(), violation.getMessage());
 			}
 			throw new RestServiceException("Bad Request", responseObj, Response.Status.BAD_REQUEST, ce);
+			
 		} catch (UniqueEmailException e) {
 			// we are updating an existence flight, so ignore this as expected
 		}
@@ -142,11 +153,15 @@ public class CustomerRestService {
 			// comparing the email, it means with this API the user could change everything
 			// including email. The behavior would be like creating a new object with same
 			// id. For simplify I think treat this as correct operation.
+			
 			customerService.update(id);
+			
 		} catch (ServiceException e) {
+			
 			Map<String, String> responseObj = new HashMap<>();
 			responseObj.put("id", "please ensure the id is associated with this number");
 			throw new RestServiceException("Bad Request", responseObj, Response.Status.NOT_FOUND, e);
+			
 		}
 
 		return Response.ok(customer).build();
@@ -164,6 +179,7 @@ public class CustomerRestService {
 
 		Customer customer = customerService.findById(id).orElseThrow(
 				() -> new RestServiceException("The id " + id + " was not found", Response.Status.NOT_FOUND));
+		
 		customerService.delete(id);
 
 		return Response.ok(customer).build();
