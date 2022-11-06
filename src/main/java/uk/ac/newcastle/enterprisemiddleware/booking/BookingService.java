@@ -1,126 +1,80 @@
 package uk.ac.newcastle.enterprisemiddleware.booking;
 
-import javax.enterprise.context.Dependent;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.validation.ConstraintViolationException;
-
-import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Logger;
 
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+import javax.transaction.Transactional;
+
+import org.hibernate.service.spi.ServiceException;
+
 /**
- * <p>This Service assumes the Control responsibility in the ECB pattern.</p>
+ * This Service assumes the Control responsibility in the ECB pattern.
  *
- * <p>The validation is done here so that it may be used by other Boundary Resources. Other Business Logic would go here
- * as well.</p>
+ * The validation is done here so that it may be used by other Boundary
+ * Resources. Other Business Logic would go here as well.
  *
- * <p>There are no access modifiers on the methods, making them 'package' scope.  They should only be accessed by a
- * Boundary / Web Service class with public methods.</p>
- *
- *
- * @author Joshua Wilson
- * @see BookingValidator
- * @see BookingRepository
+ * There are no access modifiers on the methods, making them 'package' scope.
+ * They should only be accessed by a Boundary / Web Service class with public
+ * methods.
  */
-@Dependent
+@ApplicationScoped
 public class BookingService {
 
-    @Inject
-    @Named("logger")
-    Logger log;
+	@Inject
+	Logger log;
 
-    @Inject
-    BookingValidator validator;
+	@Inject
+	BookingValidator bookingValidator;
 
-    @Inject
-    BookingRepository crud;
+	@Inject
+	BookingMapper bookingMapper;
 
-    /**
-     * <p>Returns a List of all persisted {@link Booking} objects, sorted alphabetically by last name.<p/>
-     *
-     * @return List of Booking objects
-     */
-    public List<Booking> findAllOrderedByDate() {
-        return crud.findAllOrderedByDate();
-    }
+	@Inject
+	BookingRepository bookingRepository;
 
-    /**
-     * <p>Returns a single Booking object, specified by a Long id.<p/>
-     *
-     * @param id The id field of the Booking to be returned
-     * @return The Booking with the specified id
-     */
-    public Booking findById(Long id) {
-        return crud.findById(id);
-    }
+	// wrapper to demonstrate how validator works, it's really as same as @valid.
+	// Keep in mind we do not want to expose internal service error state to REST
+	// API, especially not the validated value contained in the violation object.
+	// But for simplify, let's re-throw it right now.
+	public void validateBooking(Booking booking) {
+		bookingValidator.validate(bookingMapper.toEntity(booking));
+	}
 
-    /**
-     * <p>Returns a single Booking object, specified by a String firstName.<p/>
-     *
-     * @param firstName The firstName field of the Booking to be returned
-     * @return The first Booking with the specified firstName
-     */
-    public List<Booking> findAllByDate(Date d) {
-        return crud.findAllByDate(d);
-    }
+	public List<Booking> findAll() {
+		return bookingMapper.toDomainList(bookingRepository.findAll());
+	}
 
-    /**
-     * <p>Writes the provided Booking object to the application database.<p/>
-     *
-     * <p>Validates the data in the provided Booking object using a {@link BookingValidator} object.<p/>
-     *
-     * @param Booking The Booking object to be written to the database using a {@link BookingRepository} object
-     * @return The Booking object that has been successfully written to the application database
-     * @throws ConstraintViolationException, ValidationException, Exception
-     */
-    public Booking create(Booking booking) throws Exception {
-        log.info("BookingService.create() - Creating " + booking.getId());
+	public Optional<Booking> findById(Integer id) {
+		return bookingRepository.findById(id).map(bookingMapper::toDomain);
+	}
 
-        // Check to make sure the data fits with the parameters in the Booking model and passes validation.
-        validator.validateBooking(booking);
+	@Transactional
+	public void create(Booking booking) {
+		log.info("BookingService.create() - Creating: {} " + booking);
 
-        // Write the Booking to the database.
-        return crud.create(booking);
-    }
+		BookingEntity entity = bookingMapper.toEntity(booking);
+		bookingRepository.create(entity);
+		bookingMapper.updateDomainFromEntity(entity, booking);
+	}
 
-    /**
-     * <p>Updates an existing Booking object in the application database with the provided Booking object.<p/>
-     *
-     * <p>Validates the data in the provided Booking object using a BookingValidator object.<p/>
-     *
-     * @param Booking The Booking object to be passed as an update to the application database
-     * @return The Booking object that has been successfully updated in the application database
-     * @throws ConstraintViolationException, ValidationException, Exception
-     */
-    public Booking update(Booking booking) throws Exception {
-        log.info("BookingService.update() - Updating " + booking.getId());
+	@Transactional
+	public void update(Integer id) {
+		log.info("BookingService.update() - Updating " + id);
 
-        // Check to make sure the data fits with the parameters in the Booking model and passes validation.
-        validator.validateBooking(booking);
+		BookingEntity entity = bookingRepository.findById(id)
+				.orElseThrow(() -> new ServiceException("No Booking found for bookingId[%s]" + id));
+		bookingRepository.update(entity);
+	}
 
-        // Either update the Booking or add it if it can't be found.
-        return crud.update(booking);
-    }
-    
-    /**
-     * <p>Deletes the provided Booking object from the application database if found there.<p/>
-     *
-     * @param Booking The Booking object to be removed from the application database
-     * @return The Booking object that has been successfully removed from the application database; or null
-     * @throws Exception
-     */
-    public Booking delete(Booking booking) throws Exception {
-        log.info("delete() - Deleting " + booking.getId());
+	@Transactional
+	public void delete(Integer id) {
+		log.info("BookingService.delete() - Deleting " + id);
 
-        Booking deletedbooking = null;
-
-        if (booking.getId() != null) {
-            deletedbooking = crud.delete(booking);
-        } else {
-            log.info("delete() - No ID was found so can't Delete.");
-        }
-
-        return deletedbooking;
-    }
+		BookingEntity entity = bookingRepository.findById(id)
+				.orElseThrow(() -> new ServiceException("No Booking found for bookingId[%s]" + id));
+		bookingRepository.delete(entity);
+	}
 }

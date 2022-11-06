@@ -1,81 +1,63 @@
 package uk.ac.newcastle.enterprisemiddleware.booking;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import javax.validation.ConstraintViolation;
-import javax.validation.ConstraintViolationException;
-import javax.validation.ValidationException;
-import javax.validation.Validator;
-
-import uk.ac.newcastle.enterprisemiddleware.flight.Flight;
-
-import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * <p>This class provides methods to check Book objects against arbitrary requirements.</p>
- *
- * @author Joshua Wilson
- * @see Booking
- * @see BookingRepository
- * @see javax.validation.Validator
- */
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+import javax.validation.ConstraintViolation;
+import javax.validation.ConstraintViolationException;
+import javax.validation.Validator;
+
 @ApplicationScoped
 public class BookingValidator {
-    @Inject
-    Validator validator;
+	@Inject
+	Validator validator;
 
-    @Inject
-    BookingRepository crud;
+	@Inject
+	BookingRepository bookingRepository;
 
-    /**
-     * <p>Validates the given Book object and throws validation exceptions based on the type of error. If the error is standard
-     * bean validation errors then it will throw a ConstraintValidationException with the set of the constraints violated.<p/>
-     *
-     *
-     * <p>If the error is caused because an existing Book with the same email is registered it throws a regular validation
-     * exception so that it can be interpreted separately.</p>
-     *
-     *
-     * @param Book The Book object to be validated
-     * @throws ConstraintViolationException If Bean Validation errors exist
-     * @throws ValidationException If Book with the same email already exists
-     */
-    void validateBooking(Booking booking) throws ConstraintViolationException, ValidationException {
-        // Create a bean validator and check for issues.
-        Set<ConstraintViolation<Booking>> violations = validator.validate(booking);
+	/**
+	 * Validates the given Booking object and throws validation exceptions based on
+	 * the type of error. If the error is standard bean validation errors then it
+	 * will throw a ConstraintValidationException with the set of the constraints
+	 * violated.
+	 * 
+	 * If the error is caused by an existing Booking with the same email is
+	 * registered it throws a regular validation exception so that it can be
+	 * interpreted separately.
+	 * 
+	 * NOTE: When a database unicity constraint is set on a JPA Entity, we usually
+	 * got two options :
+	 * 
+	 * Catch the PersistenceException and the nested JPA provider exception (for
+	 * Hibernate : ConstraintViolationException). It is very hard to create a
+	 * generic handler for this exception (extract column name from the exception,
+	 * recreate the form context, …)
+	 * 
+	 * Query the database before the persist/merge operation, in order to check if
+	 * the unique value is already inserted in the database. this POC uses this
+	 * option.
+	 * 
+	 * If we don't use UniqueEmailException to isolation the validate flow, then it
+	 * will directly go to create a new booking entity even with same email address
+	 * which will raise a sql exception almost unreadable.
+	 *
+	 */
+	void validate(BookingEntity booking) {
 
-        if (!violations.isEmpty()) {
-            throw new ConstraintViolationException(new HashSet<ConstraintViolation<?>>(violations));
-        }
+		Set<ConstraintViolation<BookingEntity>> violations = validator.validate(booking);
 
-        // Check the uniqueness of the Book number
-        if (bookingAlreadyExists(booking.getFlight(), booking.getDate())) {
-            throw new UniqueFlightWithDateException("Unique Flight&Date Violation");
-        }
-    }
+		if (!violations.isEmpty()) {
+			throw new ConstraintViolationException(new HashSet<ConstraintViolation<?>>(violations));
+		}
 
-    /**
-     * <p>Checks if a Book with the same email address is already registered. This is the only way to easily capture the
-     * "@UniqueConstraint(columnNames = "email")" constraint from the Book class.</p>
-     *
-     * <p>Since Update will being using an email that is already in the database we need to make sure that it is the email
-     * from the record being updated.</p>
-     *
-     * @param email The email to check is unique
-     * @param id The user id to check the email against if it was found
-     * @return boolean which represents whether the email was found, and if so if it belongs to the user with id
-     */
-    boolean bookingAlreadyExists(Flight fight, Date d) {       
-        List<Booking> bookings = crud.findAllByDate(d);
-        System.out.print(bookings.size());
-        
-        for(Booking b : bookings)
-        	if( b.getFlight().equals(fight))
-        		return true;
-        
-        return false;
-    }
+		List<BookingEntity> bookings = bookingRepository.findByDate(booking.getDate());
+
+		for (BookingEntity b : bookings)
+			if (b.getFlight().getNumber().equals(booking.getFlight().getNumber()))
+				throw new UniqueFlightWithDateException("this booking is already exist");
+
+	}
 }

@@ -1,4 +1,17 @@
-package uk.ac.newcastle.enterprisemiddleware.bookingTest;
+package uk.ac.newcastle.enterprisemiddleware.bookingtest;
+
+import static io.restassured.RestAssured.given;
+import static io.restassured.RestAssured.when;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.Date;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.common.http.TestHTTPEndpoint;
@@ -11,32 +24,18 @@ import uk.ac.newcastle.enterprisemiddleware.booking.BookingRestService;
 import uk.ac.newcastle.enterprisemiddleware.customer.Customer;
 import uk.ac.newcastle.enterprisemiddleware.flight.Flight;
 
-import org.junit.jupiter.api.*;
-import java.util.Date;
-
-import static io.restassured.RestAssured.given;
-import static io.restassured.RestAssured.when;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 @QuarkusTest
 @TestHTTPEndpoint(BookingRestService.class)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @QuarkusTestResource(H2DatabaseTestResource.class)
 class BookingRestServiceIntegrationTest {
 
-	private static Booking booking;
+	private static Booking booking = new Booking();
 
 	@BeforeAll
 	static void setup() {
-		Response response = when().get("/customers").then().statusCode(200).extract().response();
-		Customer[] customers = response.body().as(Customer[].class);
-		System.out.println(customers[0].getEmail());
-		response = when().get("/flights").then().statusCode(200).extract().response();
-		Flight[] flights = response.body().as(Flight[].class);
-		System.out.println(flights[0].getNumber());
-		booking = new Booking();
+		Customer[] customers = when().get("/customers").then().statusCode(200).extract().body().as(Customer[].class);
+		Flight[] flights = when().get("/flights").then().statusCode(200).extract().body().as(Flight[].class);
 		booking.setCustomer(customers[0]);
 		booking.setFlight(flights[0]);
 		booking.setDate(new Date());
@@ -44,68 +43,82 @@ class BookingRestServiceIntegrationTest {
 
 	@Test
 	@Order(1)
-	public void testCanCreatGuestBooking() throws Exception {
+	public void CreatGuestBooking() {
 		Customer c = new Customer();
-		c.setId(1L);
+		c.setId(1);
+		c.setName("fake");
 		c.setEmail("fake@email.com");
 		c.setPhonenumber("01234567890");
-		c.setName("adsfadf");
 		Flight f = new Flight();
-		// we must provide fake info or jackson mapper will fail due to flight requirement doesn't meet
-		// same for customer
-		f.setId(1L);
-		f.setDeparture("BSD");
-		f.setDestination("BSX");
-		f.setNumber("A5565");
+		f.setId(1);
+		f.setNumber("AFAKE");
+		f.setDeparture("ABC");
+		f.setDestination("XYZ");
 		Booking b = new Booking();
-		System.out.print("what's the email");
-		System.out.print(c.getEmail());
 		b.setCustomer(c);
 		b.setFlight(f);
 		b.setDate(new Date());
-		System.out.print(c.getEmail());
-		System.out.print(f.getNumber());
-		System.out.print("start post!");
-		given().contentType(ContentType.JSON).body(b).when().post().then().statusCode(400).body("reasons.customer",
-				containsString("The customer " + b.getCustomer().getEmail() + " is not exist"));;
+		given().contentType(ContentType.JSON).body(b).when().post().then().statusCode(400);
 
 	}
 
-//	@Test
-//	@Order(2)
-//	public void testCanCreatebooking() {
-//		given().contentType(ContentType.JSON).body(booking).when().post().then().statusCode(201);
-//	}
-//
-//	@Test
-//	@Order(3)
-//	public void testCanGetbookings() {
-//		Response response = when().get().then().statusCode(200).extract().response();
-//
-//		Booking[] result = response.body().as(Booking[].class);
-//
-//		System.out.println(result[0]);
-//
-//		assertEquals(1, result.length);
-//		assertTrue(booking.getCustomer().equals(result[0].getCustomer()), "Customer not equal");
-//		assertTrue(booking.getFlight().equals(result[0].getFlight()), "Flight not equal");
-//		assertTrue(booking.getDate().equals(result[0].getDate()), "Date not equal");
-//	}
-//
-//	@Test
-//	@Order(4)
-//	public void testDuplicateEmailCausesError() {
-//		given().contentType(ContentType.JSON).body(booking).when().post().then().statusCode(409).body("reasons.flight",
-//				containsString("The flight" + booking.getFlight().getNumber() + "is already booked"));
-//	}
-//
-//	@Test
-//	@Order(5)
-//	public void testCanDeletebooking() {
-//		Response response = when().get().then().statusCode(200).extract().response();
-//
-//		Booking[] result = response.body().as(Booking[].class);
-//
-//		when().delete(result[0].getId().toString()).then().statusCode(204);
-//	}
+	@Test
+	@Order(2)
+	public void Createbooking() {
+		given().contentType(ContentType.JSON).body(booking).when().post().then().statusCode(201);
+	}
+
+	@Test
+	@Order(3)
+	public void Getbookings() {
+
+		Booking[] bookings = when().get().then().statusCode(200).extract().body().as(Booking[].class);
+
+		assertEquals(1, bookings.length);
+		assertTrue(booking.getCustomer().equals(bookings[0].getCustomer()), "Customer not equal");
+		assertTrue(booking.getFlight().equals(bookings[0].getFlight()), "Flight not equal");
+		assertTrue(booking.getDate().equals(bookings[0].getDate()), "Date not equal");
+	}
+
+	@Test
+	@Order(4)
+	public void Deletebooking() {
+		Response response = when().get().then().statusCode(200).extract().response();
+
+		Booking[] result = response.body().as(Booking[].class);
+
+		when().delete(result[0].getId().toString()).then().statusCode(200);
+	}
+
+	@Test
+	@Order(5)
+	public void GetBookingMadeByOneCustomer() {
+		Createbooking();
+		Booking[] bookings = when().get("http://localhost:8080/customers/booking/1").then().statusCode(200).extract()
+				.response().body().as(Booking[].class);
+
+		assertEquals(1, bookings.length);
+		assertTrue(booking.getCustomer().equals(bookings[0].getCustomer()), "Customer not equal");
+		assertTrue(booking.getFlight().equals(bookings[0].getFlight()), "Flight not equal");
+		assertTrue(booking.getDate().equals(bookings[0].getDate()), "Date not equal");
+	}
+
+	@Test
+	@Order(6)
+	public void DeletebookingAndCheckByCustomer() {
+		Deletebooking();
+		Booking[] bookings = when().get("http://localhost:8080/customers/booking/1").then().statusCode(200).extract()
+				.response().body().as(Booking[].class);
+		assertEquals(0, bookings.length);
+	}
+
+	@Test
+	@Order(7)
+	public void DeleteCustomerAndCheckBooking() {
+		Createbooking();
+		when().delete("http://localhost:8080/customers/id/1").then().statusCode(200);
+		Booking[] bookings = when().get().then().statusCode(200).extract().body().as(Booking[].class);
+		assertEquals(0, bookings.length);
+	}
+
 }

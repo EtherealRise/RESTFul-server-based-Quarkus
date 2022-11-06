@@ -1,143 +1,70 @@
 package uk.ac.newcastle.enterprisemiddleware.booking;
 
-import javax.enterprise.context.RequestScoped;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.persistence.EntityManager;
-import javax.persistence.TypedQuery;
-import javax.validation.ConstraintViolationException;
-
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Logger;
 
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+import javax.persistence.EntityManager;
+import javax.persistence.TypedQuery;
+
+import uk.ac.newcastle.enterprisemiddleware.flight.Flight;
+
 /**
- * <p>This is a Repository class and connects the Service/Control layer (see {@link BookingService} with the
- * Domain/Entity Object (see {@link Booking}).<p/>
- *
- * <p>There are no access modifiers on the methods making them 'package' scope.  They should only be accessed by a
- * Service/Control object.<p/>
- *
- * @author Joshua Wilson
- * @see Booking
- * @see javax.persistence.EntityManager
+ * There are no access modifiers on the methods making them 'package' scope.
+ * They should only be accessed by a service object.
  */
-@RequestScoped
+
+@ApplicationScoped
 public class BookingRepository {
 
-    @Inject
-    @Named("logger")
-    Logger log;
+	@Inject
+	Logger log;
 
-    @Inject
-    EntityManager em;
+	@Inject
+	EntityManager em;
 
-    /**
-     * <p>Returns a List of all persisted {@link Booking} objects, sorted alphabetically by last name.</p>
-     *
-     * @return List of Booking objects
-     */
-    List<Booking> findAllOrderedByDate() {
-        TypedQuery<Booking> query = em.createNamedQuery(Booking.FIND_ALL, Booking.class);
-        return query.getResultList();
-    }
+	List<BookingEntity> findAll() {
+		TypedQuery<BookingEntity> query = em.createNamedQuery("Booking.findAll", BookingEntity.class);
+		return query.getResultList();
+	}
 
-    /**
-     * <p>Returns a single Booking object, specified by a Long id.<p/>
-     *
-     * @param id The id field of the Booking to be returned
-     * @return The Booking with the specified id
-     */
-    Booking findById(Long id) {
-        return em.find(Booking.class, id);
-    }
+	List<BookingEntity> findByFlight(Flight flight) {
+		TypedQuery<BookingEntity> query = em.createNamedQuery("Booking.findByFlight", BookingEntity.class)
+				.setParameter("flight", flight);
+		return query.getResultList();
+	}
 
-    /**
-     * <p>Returns a single Booking object, specified by a String email.</p>
-     *
-     * <p>If there is more than one Booking with the specified email, only the first encountered will be returned.<p/>
-     *
-     * @param email The email field of the Booking to be returned
-     * @return The first Booking with the specified email
-     */
-    List<Booking> findAllByDate(Date d) {
-        TypedQuery<Booking> query = em.createNamedQuery(Booking.FIND_BY_DATE, Booking.class).setParameter("d", d);
-        return query.getResultList();
-    }
+	List<BookingEntity> findByDate(Date d) {
+		TypedQuery<BookingEntity> query = em.createNamedQuery("Booking.findByDate", BookingEntity.class)
+				.setParameter("d", d);
+		return query.getResultList();
+	}
 
-    /**
-     * <p>Persists the provided Booking object to the application database using the EntityManager.</p>
-     *
-     * <p>{@link javax.persistence.EntityManager#persist(Object) persist(Object)} takes an entity instance, adds it to the
-     * context and makes that instance managed (ie future updates to the entity will be tracked)</p>
-     *
-     * <p>persist(Object) will set the @GeneratedValue @Id for an object.</p>
-     *
-     * @param Booking The Booking object to be persisted
-     * @return The Booking object that has been persisted
-     * @throws ConstraintViolationException, ValidationException, Exception
-     */
-    Booking create(Booking booking) throws Exception {
-        log.info("BookingRepository.create() - Creating " + booking.getId());
+	Optional<BookingEntity> findById(Integer id) {
+		return Optional.ofNullable(em.find(BookingEntity.class, Long.valueOf(id)));
+	}
 
-        // Write the Booking to the database.
-        em.persist(booking);
+	BookingEntity create(BookingEntity booking) {
+		log.info("BookingRepository.create() - Creating " + booking.getId());
 
-        return booking;
-    }
+		em.persist(booking);
+		return booking;
+	}
 
-    /**
-     * <p>Updates an existing Booking object in the application database with the provided Booking object.</p>
-     *
-     * <p>{@link javax.persistence.EntityManager#merge(Object) merge(Object)} creates a new instance of your entity,
-     * copies the state from the supplied entity, and makes the new copy managed. The instance you pass in will not be
-     * managed (any changes you make will not be part of the transaction - unless you call merge again).</p>
-     *
-     * <p>merge(Object) however must have an object with the @Id already generated.</p>
-     *
-     * @param Booking The Booking object to be merged with an existing Booking
-     * @return The Booking that has been merged
-     * @throws ConstraintViolationException, ValidationException, Exception
-     */
-    Booking update(Booking booking) throws Exception {
-        log.info("BookingRepository.update() - Updating " + booking.getId());
+	BookingEntity update(BookingEntity booking) {
+		log.info("BookingRepository.update() - Updating " + booking.getId());
 
-        // Either update the Booking or add it if it can't be found.
-        em.merge(booking);
+		em.merge(booking);
+		return booking;
+	}
 
-        return booking;
-    }
-    
-    /**
-     * <p>Deletes the provided Booking object from the application database if found there</p>
-     *
-     * @param Booking The Booking object to be removed from the application database
-     * @return The Booking object that has been successfully removed from the application database; or null
-     * @throws Exception
-     */
-    Booking delete(Booking booking) throws Exception {
-        log.info("BookingRepository.delete() - Deleting " + booking.getId());
+	BookingEntity delete(BookingEntity booking) {
+		log.info("BookingRepository.delete() - Deleting " + booking.getId());
 
-        if (booking.getId() != null) {
-            /*
-             * The Hibernate session (aka EntityManager's persistent context) is closed and invalidated after the commit(),
-             * because it is bound to a transaction. The object goes into a detached status. If you open a new persistent
-             * context, the object isn't known as in a persistent state in this new context, so you have to merge it.
-             *
-             * Merge sees that the object has a primary key (id), so it knows it is not new and must hit the database
-             * to reattach it.
-             *
-             * Note, there is NO remove method which would just take a primary key (id) and a entity class as argument.
-             * You first need an object in a persistent state to be able to delete it.
-             *
-             * Therefore we merge first and then we can remove it.
-             */
-            em.remove(em.merge(booking));
-
-        } else {
-            log.info("BookingRepository.delete() - No ID was found so can't Delete.");
-        }
-
-        return booking;
-    }
+		em.remove(em.merge(booking));
+		return booking;
+	}
 }
