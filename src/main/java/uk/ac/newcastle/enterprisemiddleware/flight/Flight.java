@@ -3,6 +3,8 @@ package uk.ac.newcastle.enterprisemiddleware.flight;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
+import uk.ac.newcastle.enterprisemiddleware.customer.Customer;
+
 public class Flight {
 
 	@NotNull
@@ -47,5 +49,20 @@ public class Flight {
 
 	public void setDestination(String destination) {
 		this.destination = destination;
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if (this == o)
+			return true;
+		if (!(o instanceof Flight))
+			return false;
+		Flight other = (Flight) o;
+		return number != null && number.equals(other.getNumber());
+	}
+
+	@Override
+	public int hashCode() {
+		return getClass().hashCode();
 	}
 }
