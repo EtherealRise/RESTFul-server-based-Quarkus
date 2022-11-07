@@ -1,25 +1,26 @@
-package uk.ac.newcastle.enterprisemiddleware.guestbookingTest;
+package uk.ac.newcastle.enterprisemiddleware.guestbookingtest;
+
+import static io.restassured.RestAssured.given;
+import static io.restassured.RestAssured.when;
+
+import java.util.Date;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.common.http.TestHTTPEndpoint;
 import io.quarkus.test.h2.H2DatabaseTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
-import io.restassured.response.Response;
 import uk.ac.newcastle.enterprisemiddleware.booking.Booking;
 import uk.ac.newcastle.enterprisemiddleware.customer.Customer;
 import uk.ac.newcastle.enterprisemiddleware.flight.Flight;
 import uk.ac.newcastle.enterprisemiddleware.guestbooking.GuestBooking;
 import uk.ac.newcastle.enterprisemiddleware.guestbooking.GuestBookingRestService;
-
-import org.junit.jupiter.api.*;
-import java.util.Date;
-
-import static io.restassured.RestAssured.given;
-import static io.restassured.RestAssured.when;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
 @TestHTTPEndpoint(GuestBookingRestService.class)
@@ -27,31 +28,42 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @QuarkusTestResource(H2DatabaseTestResource.class)
 class GuestBookingRestServiceIntegrationTest {
 
-	private static GuestBooking gbooking;
+	private static Customer customer = new Customer();
+	private static GuestBooking gbooking = new GuestBooking();
+	private static Date d = new Date();
 
 	@BeforeAll
 	static void setup() {
-		Customer c = new Customer();
-		c.setEmail("guest@email.com");
-		c.setName("guest");
-		c.setPhonenumber("01234567890");
-		Response response = when().get("/flights").then().statusCode(200).extract().response();
-		Flight[] flights = response.body().as(Flight[].class);
+		customer.setEmail("guest@email.com");
+		customer.setName("guest");
+		customer.setPhonenumber("01234567890");
+		Flight[] flights = when().get("/flights").then().statusCode(200).extract().body().as(Flight[].class);
 		Booking b = new Booking();
-		b.setCustomer(c);
 		b.setFlight(flights[0]);
-		b.setDate(new Date());
-		gbooking = new GuestBooking();
-		gbooking.setCustomer(c);
+		b.setDate(d);
+		gbooking.setCustomer(customer);
 		gbooking.setBooking(b);
 	}
 
 	@Test
 	@Order(1)
-	public void testCanCreatGuestBooking() throws Exception {
-
+	public void CreateGuestBooking() {
 		given().contentType(ContentType.JSON).body(gbooking).when().post().then().statusCode(201);
+	}
 
+	@Test
+	@Order(2)
+	public void CreateWithInvalidCustomer() {
+		customer.setEmail("wrong_format");
+		given().contentType(ContentType.JSON).body(gbooking).when().post().then().statusCode(400);
+	}
+	
+	@Test
+	@Order(3)
+	public void CreateWithInvalidBooking() {
+		customer.setEmail("willnotshow@email");
+		//this time, with same flight and date, we will be failed.
+		given().contentType(ContentType.JSON).body(gbooking).when().post().then().statusCode(409);
 	}
 
 }
