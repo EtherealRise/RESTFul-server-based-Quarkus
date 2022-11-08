@@ -1,6 +1,5 @@
 package uk.ac.newcastle.enterprisemiddleware.customer;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,8 +27,7 @@ import uk.ac.newcastle.enterprisemiddleware.booking.BookingEntity;
 @Table(name = "customer")
 @NamedQueries({ @NamedQuery(name = "Customer.findAll", query = "SELECT c FROM CustomerEntity c ORDER BY c.name ASC"),
 		@NamedQuery(name = "Customer.findByEmail", query = "SELECT c FROM CustomerEntity c WHERE c.email = :email") })
-@SuppressWarnings("serial")
-public class CustomerEntity implements Serializable {
+public class CustomerEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "customerId_seq")

@@ -1,6 +1,5 @@
 package uk.ac.newcastle.enterprisemiddleware.booking;
 
-import java.io.Serializable;
 import java.util.Date;
 import java.util.Objects;
 
@@ -28,8 +27,7 @@ import uk.ac.newcastle.enterprisemiddleware.flight.FlightEntity;
 @NamedQueries({ @NamedQuery(name = "Booking.findAll", query = "SELECT b FROM BookingEntity b ORDER BY b.d ASC"),
 		@NamedQuery(name = "Booking.findByFlight", query = "SELECT b FROM BookingEntity b WHERE b.flight = :flight"),
 		@NamedQuery(name = "Booking.findByDate", query = "SELECT b FROM BookingEntity b WHERE b.d = :d") })
-@SuppressWarnings("serial")
-public class BookingEntity implements Serializable {
+public class BookingEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "bookingId_seq")

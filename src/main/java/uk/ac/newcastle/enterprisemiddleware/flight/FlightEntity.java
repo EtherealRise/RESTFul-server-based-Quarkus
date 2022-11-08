@@ -1,6 +1,5 @@
 package uk.ac.newcastle.enterprisemiddleware.flight;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -28,8 +27,7 @@ import uk.ac.newcastle.enterprisemiddleware.booking.BookingEntity;
 @NamedQueries({ @NamedQuery(name = "Flight.findAll", query = "SELECT f FROM FlightEntity f ORDER BY f.number ASC"),
 		@NamedQuery(name = "Flight.findByNumber", query = "SELECT f FROM FlightEntity f WHERE f.number = :number") })
 @Table(name = "flight", uniqueConstraints = @UniqueConstraint(columnNames = "number"))
-@SuppressWarnings("serial")
-public class FlightEntity implements Serializable {
+public class FlightEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "flightId_seq")
