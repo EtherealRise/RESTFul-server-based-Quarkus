@@ -55,7 +55,7 @@ public class BookingRestService {
 	@GET
 	@Operation(summary = "Fetch all Bookings", description = "Returns a JSON array of all stored Booking objects.")
 	@APIResponse(responseCode = "200", description = "Bookings would be return")
-	public Response getAll(@QueryParam("id") Long id) {
+	public Response getAll() {
 		return Response.ok(bookingService.findAll()).build();
 	}
 
