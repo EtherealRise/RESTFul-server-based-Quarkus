@@ -20,7 +20,9 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
+import uk.ac.newcastle.enterprisemiddleware.booking.Booking;
 import uk.ac.newcastle.enterprisemiddleware.booking.BookingEntity;
+import uk.ac.newcastle.enterprisemiddleware.travelagentbooking.TABookingEntity;
 
 @Entity
 @ApplicationScoped
@@ -53,6 +55,9 @@ public class CustomerEntity {
 	@OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<BookingEntity> bookings = new ArrayList<>();
 
+	@OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<TABookingEntity> tabookings = new ArrayList<>();
+	
 	public Long getId() {
 		return id;
 	}
@@ -87,6 +92,18 @@ public class CustomerEntity {
 
 	public List<BookingEntity> getBooking() {
 		return bookings;
+	}
+	
+	public void addBooking(BookingEntity booking) {
+		bookings.add(booking);
+	}
+	
+	public List<TABookingEntity> getTravelAgentBooking() {
+		return tabookings;
+	}
+	
+	public void addTravelAgentBooking(TABookingEntity tabooking) {
+		tabookings.add(tabooking);
 	}
 
 	// Hibernate requirement

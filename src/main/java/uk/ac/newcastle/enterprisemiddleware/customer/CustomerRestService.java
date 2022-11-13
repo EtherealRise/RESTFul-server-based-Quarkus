@@ -80,6 +80,15 @@ public class CustomerRestService {
 			@Parameter(description = "id of Customer to be fetched", required = true) @PathParam("id") Integer id) {
 		return Response.ok(customerService.getBooking(id)).build();
 	}
+	
+	@GET
+	@Path("/tabooking/{id:.+}")
+	@Operation(summary = "Fetch all travel aent bookings made by this customer", description = "Returns a JSON representation of the list of bookings.")
+	@APIResponse(responseCode = "200", description = "Bookings would be return, empty if customer not found")
+	public Response getTABooking(
+			@Parameter(description = "id of Customer to be fetched", required = true) @PathParam("id") Integer id) {
+		return Response.ok(customerService.getTABooking(id)).build();
+	}
 
 	@POST
 	@Operation(description = "Add a new Customer to the database")
