@@ -76,12 +76,12 @@ public class FlightService {
 	}
 
 	@Transactional
-	public void update(Integer id) {
+	public void update(Integer id, Flight flight) {
 		log.info("FlightService.update() - Updating " + id);
 
-		FlightEntity entity = flightRepository.findById(id)
+		flightRepository.findById(id)
 				.orElseThrow(() -> new ServiceException("No Flight found for flightId[%s]" + id));
-		flightRepository.update(entity);
+		flightRepository.update(flightMapper.toEntity(flight));
 	}
 
 	@Transactional

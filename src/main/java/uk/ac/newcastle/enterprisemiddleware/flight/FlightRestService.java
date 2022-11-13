@@ -145,6 +145,10 @@ public class FlightRestService {
         if (flight == null) {
             throw new RestServiceException("Bad Request", Response.Status.BAD_REQUEST);
         }
+        
+        if (flight.getId() != id) {
+        	throw new RestServiceException("Bad Request", Response.Status.BAD_REQUEST);
+        }
 
 		try {
 			
@@ -174,11 +178,7 @@ public class FlightRestService {
 
 		try {
 			
-			// we do NOT further check whether the id is associated with this customer by
-			// comparing the email, it means with this API the user could change everything
-			// including email. The behavior would be like creating a new object with same
-			// id. For simplify I think treat this as correct operation.
-			flightService.update(id);
+			flightService.update(id, flight);
 			
 		} catch (ServiceException e) {
 			Map<String, String> responseObj = new HashMap<>();

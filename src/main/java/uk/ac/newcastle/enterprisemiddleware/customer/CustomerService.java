@@ -85,12 +85,12 @@ public class CustomerService {
 	}
 
 	@Transactional
-	public void update(Integer id) {
+	public void update(Integer id, Customer customer) {
 		log.info("CustomerService.update() - Updating " + id);
 
-		CustomerEntity entity = customerRepository.findById(id)
+		customerRepository.findById(id)
 				.orElseThrow(() -> new ServiceException("No Customer found for customerId[%s]" + id));
-		customerRepository.update(entity);
+		customerRepository.update(customerMapper.toEntity(customer));
 	}
 
 	@Transactional
