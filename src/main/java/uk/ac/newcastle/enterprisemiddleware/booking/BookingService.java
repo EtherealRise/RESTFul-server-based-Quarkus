@@ -61,12 +61,12 @@ public class BookingService {
 	}
 
 	@Transactional
-	public void update(Integer id) {
+	public void update(Integer id, Booking booking) {
 		log.info("BookingService.update() - Updating " + id);
 
-		BookingEntity entity = bookingRepository.findById(id)
+		bookingRepository.findById(id)
 				.orElseThrow(() -> new ServiceException("No Booking found for bookingId[%s]" + id));
-		bookingRepository.update(entity);
+		bookingRepository.update(bookingMapper.toEntity(booking));
 	}
 
 	@Transactional

@@ -56,7 +56,6 @@ public class BookingRepository {
 
 	BookingEntity update(BookingEntity booking) {
 		log.info("BookingRepository.update() - Updating " + booking.getId());
-
 		em.merge(booking);
 		return booking;
 	}

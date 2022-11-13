@@ -17,7 +17,6 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -131,13 +130,20 @@ public class BookingRestService {
 			@Parameter(description = "Id of Booking to be updated", required = true) @Schema(minimum = "0") @PathParam("id") Integer id,
 			@Parameter(description = "JSON representation of Booking object to be updated in the database", required = true) Booking booking) {
 
+		Customer customer = customerService.findById(booking.getCustomer().getId())
+				.orElseThrow(() -> new RestServiceException("We can't found customer", Response.Status.BAD_REQUEST));
+
+		if (!customer.equals(booking.getCustomer()))
+			throw new RestServiceException("use custoemr's own API for it update", Response.Status.BAD_REQUEST);
+
+		Flight flight = flightService.findById(booking.getFlight().getId())
+				.orElseThrow(() -> new RestServiceException("We can't found flight", Response.Status.BAD_REQUEST));
+
+		if (!flight.equals(booking.getFlight()))
+			throw new RestServiceException("use flight's own API for it update", Response.Status.BAD_REQUEST);
+
 		try {
-
-			customerService.validateCustomer(booking.getCustomer());
-			flightService.validateFlight(booking.getFlight());
-
 			bookingService.validateBooking(booking);
-
 		} catch (ConstraintViolationException ce) {
 			// Handle bean validation issues
 			Map<String, String> responseObj = new HashMap<>();
@@ -147,7 +153,7 @@ public class BookingRestService {
 			}
 			throw new RestServiceException("Bad Request", responseObj, Response.Status.BAD_REQUEST, ce);
 		} catch (UniqueFlightWithDateException e) {
-			// // we are updating an existence flight, so ignore this as expected
+			// we are updating an existence flight, so ignore this as expected
 		}
 
 		try {
@@ -155,13 +161,12 @@ public class BookingRestService {
 			// comparing the email, it means with this API the user could change everything
 			// including email. The behavior would be like creating a new object with same
 			// id. For simplify I think treat this as correct operation.
-			bookingService.update(id);
+			bookingService.update(id, booking);
 		} catch (ServiceException e) {
 			Map<String, String> responseObj = new HashMap<>();
 			responseObj.put("id", "please ensure the id is associated with this number");
 			throw new RestServiceException("Bad Request", responseObj, Response.Status.NOT_FOUND, e);
 		}
-		bookingService.update(id);
 		return Response.ok(booking).build();
 	}
 
