@@ -60,6 +60,8 @@ public class BookingEntity {
 
 	public void setCustomer(CustomerEntity customer) {
 		this.customer = customer;
+		if (customer != null)
+			customer.addBooking(this);
 	}
 
 	public FlightEntity getFlight() {
